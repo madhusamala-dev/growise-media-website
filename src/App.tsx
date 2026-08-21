@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, Loader2 } from 'lucide-react'
 import { Header } from './components/Header'
 import { Hero } from './components/Hero'
 import { FreeAudit } from './components/FreeAudit'
@@ -25,32 +25,36 @@ import { cn } from './lib/cn'
 import { AuthProvider, RequireAuth, RequireGuest, RequireOnboarding } from './portal/lib/auth'
 import { PortalProvider } from './portal/lib/store'
 import { ToastProvider } from './portal/lib/toast'
-import { PortalLayout } from './portal/components/layout/PortalLayout'
-import { Login } from './portal/pages/auth/Login'
-import { Signup } from './portal/pages/auth/Signup'
-import { ForgotPassword } from './portal/pages/auth/ForgotPassword'
-import { OAuthCallback } from './portal/pages/auth/OAuthCallback'
 import { OAUTH_CALLBACK_PATH } from './portal/lib/authConfig'
-import { Onboarding } from './portal/pages/Onboarding'
-import { Dashboard } from './portal/pages/Dashboard'
-import { ContentLibrary } from './portal/pages/ContentLibrary'
-import { ContentDetail } from './portal/pages/ContentDetail'
-import { Approvals } from './portal/pages/Approvals'
-import { CalendarPage } from './portal/pages/CalendarPage'
-import { AnalyticsPage } from './portal/pages/AnalyticsPage'
-import { SocialAccounts } from './portal/pages/SocialAccounts'
-import { BrandKit } from './portal/pages/BrandKit'
-import { Messages } from './portal/pages/Messages'
-import { Settings } from './portal/pages/Settings'
-import { NotFound } from './portal/pages/NotFound'
-import { AuditLandingPage } from './audit/pages/LandingPage'
-import { AnalyzingPage } from './audit/pages/AnalyzingPage'
-import { AuditReportPage } from './audit/pages/AuditReportPage'
-import { LeadPreviewPage } from './audit/pages/LeadPreviewPage'
-import { AdminDashboardPage } from './audit/pages/admin/AdminDashboardPage'
-import { AdminAuditsPage } from './audit/pages/admin/AdminAuditsPage'
-import { AdminLeadsPage } from './audit/pages/admin/AdminLeadsPage'
 import { AuditModalProvider } from './audit/context/AuditModalContext'
+
+/* ---------------- Lazy-loaded portal pages ---------------- */
+const PortalLayout = lazy(() => import('./portal/components/layout/PortalLayout').then(m => ({ default: m.PortalLayout })))
+const Login = lazy(() => import('./portal/pages/auth/Login').then(m => ({ default: m.Login })))
+const Signup = lazy(() => import('./portal/pages/auth/Signup').then(m => ({ default: m.Signup })))
+const ForgotPassword = lazy(() => import('./portal/pages/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })))
+const OAuthCallback = lazy(() => import('./portal/pages/auth/OAuthCallback').then(m => ({ default: m.OAuthCallback })))
+const Onboarding = lazy(() => import('./portal/pages/Onboarding').then(m => ({ default: m.Onboarding })))
+const Dashboard = lazy(() => import('./portal/pages/Dashboard').then(m => ({ default: m.Dashboard })))
+const ContentLibrary = lazy(() => import('./portal/pages/ContentLibrary').then(m => ({ default: m.ContentLibrary })))
+const ContentDetail = lazy(() => import('./portal/pages/ContentDetail').then(m => ({ default: m.ContentDetail })))
+const Approvals = lazy(() => import('./portal/pages/Approvals').then(m => ({ default: m.Approvals })))
+const CalendarPage = lazy(() => import('./portal/pages/CalendarPage').then(m => ({ default: m.CalendarPage })))
+const AnalyticsPage = lazy(() => import('./portal/pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })))
+const SocialAccounts = lazy(() => import('./portal/pages/SocialAccounts').then(m => ({ default: m.SocialAccounts })))
+const BrandKit = lazy(() => import('./portal/pages/BrandKit').then(m => ({ default: m.BrandKit })))
+const Messages = lazy(() => import('./portal/pages/Messages').then(m => ({ default: m.Messages })))
+const Settings = lazy(() => import('./portal/pages/Settings').then(m => ({ default: m.Settings })))
+const NotFound = lazy(() => import('./portal/pages/NotFound').then(m => ({ default: m.NotFound })))
+
+/* ---------------- Lazy-loaded audit pages ---------------- */
+const AuditLandingPage = lazy(() => import('./audit/pages/LandingPage').then(m => ({ default: m.AuditLandingPage })))
+const AnalyzingPage = lazy(() => import('./audit/pages/AnalyzingPage').then(m => ({ default: m.AnalyzingPage })))
+const AuditReportPage = lazy(() => import('./audit/pages/AuditReportPage').then(m => ({ default: m.AuditReportPage })))
+const LeadPreviewPage = lazy(() => import('./audit/pages/LeadPreviewPage').then(m => ({ default: m.LeadPreviewPage })))
+const AdminDashboardPage = lazy(() => import('./audit/pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })))
+const AdminAuditsPage = lazy(() => import('./audit/pages/admin/AdminAuditsPage').then(m => ({ default: m.AdminAuditsPage })))
+const AdminLeadsPage = lazy(() => import('./audit/pages/admin/AdminLeadsPage').then(m => ({ default: m.AdminLeadsPage })))
 
 /* ---------------- Landing page (AI Growth Platform Narrative) ---------------- */
 
@@ -128,6 +132,15 @@ function LandingPage() {
   )
 }
 
+/* ---------------- Loading fallback ---------------- */
+function PageLoader() {
+  return (
+    <div className="flex h-[60vh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-ember-500" />
+    </div>
+  )
+}
+
 function BackToTop() {
   const [visible, setVisible] = useState(false)
 
@@ -161,6 +174,7 @@ export default function App() {
         <PortalProvider>
           <AuditModalProvider>
             <ScrollToTop />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/audit" element={<AuditLandingPage />} />
@@ -230,6 +244,7 @@ export default function App() {
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </AuditModalProvider>
         </PortalProvider>
       </ToastProvider>
