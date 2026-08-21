@@ -21,6 +21,6 @@ Thumbs.db
 .idea/
 
 # Database files
-data/
+/data/
 *.sqlite
 *.sqlite-journal
