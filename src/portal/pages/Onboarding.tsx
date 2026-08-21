@@ -307,7 +307,7 @@ export function Onboarding() {
               <Field label="Industry" error={!data.business.industry ? 'Select your industry' : undefined}>
                 <SelectInput value={data.business.industry} onChange={(e) => set('business', { ...data.business, industry: e.target.value })}>
                   <option value="">Select an industry</option>
-                  {industryOptions.map((o) => (
+                  {industryOptions.map((o: string) => (
                     <option key={o} value={o} className="bg-ink-900">
                       {o}
                     </option>
@@ -352,7 +352,7 @@ export function Onboarding() {
               <Field label="Customer type" optional>
                 <SelectInput value={data.audience.customerType} onChange={(e) => set('audience', { ...data.audience, customerType: e.target.value })}>
                   <option value="">Select…</option>
-                  {['Individuals', 'Businesses / B2B', 'Both'].map((o) => (
+                  {['Individuals', 'Businesses / B2B', 'Both'].map((o: string) => (
                     <option key={o} value={o} className="bg-ink-900">
                       {o}
                     </option>
@@ -369,7 +369,7 @@ export function Onboarding() {
               <Field label="Age range">
                 <SelectInput value={data.audience.ageRange} onChange={(e) => set('audience', { ...data.audience, ageRange: e.target.value })}>
                   <option value="">Select…</option>
-                  {ageRangeOptions.map((o) => (
+                  {ageRangeOptions.map((o: string) => (
                     <option key={o} value={o} className="bg-ink-900">
                       {o}
                     </option>
@@ -460,7 +460,7 @@ export function Onboarding() {
               </div>
               <Field label="Preferred language" className="sm:col-span-2">
                 <SelectInput value={data.brand.language} onChange={(e) => set('brand', { ...data.brand, language: e.target.value })}>
-                  {languageOptions.map((o) => (
+                  {languageOptions.map((o: string) => (
                     <option key={o} value={o} className="bg-ink-900">
                       {o}
                     </option>
@@ -519,21 +519,21 @@ export function Onboarding() {
                 placeholder="e.g. Sports injury rehab"
                 items={data.content.products}
                 onAdd={(v) => set('content', { ...data.content, products: [...data.content.products, v] })}
-                onRemove={(v) => set('content', { ...data.content, products: data.content.products.filter((x) => x !== v) })}
+                onRemove={(v) => set('content', { ...data.content, products: data.content.products.filter((x: string) => x !== v) })}
               />
               <ListInput
                 label="Topics we should talk about"
                 placeholder="e.g. Desk posture, recovery stories"
                 items={data.content.topics}
                 onAdd={(v) => set('content', { ...data.content, topics: [...data.content.topics, v] })}
-                onRemove={(v) => set('content', { ...data.content, topics: data.content.topics.filter((x) => x !== v) })}
+                onRemove={(v) => set('content', { ...data.content, topics: data.content.topics.filter((x: string) => x !== v) })}
               />
               <ListInput
                 label="Things to avoid"
                 placeholder="e.g. Pricing specifics, before/after photos"
                 items={data.content.avoid}
                 onAdd={(v) => set('content', { ...data.content, avoid: [...data.content.avoid, v] })}
-                onRemove={(v) => set('content', { ...data.content, avoid: data.content.avoid.filter((x) => x !== v) })}
+                onRemove={(v) => set('content', { ...data.content, avoid: data.content.avoid.filter((x: string) => x !== v) })}
               />
               <div className="grid gap-5 sm:grid-cols-2">
                 <ChipGroup
@@ -544,7 +544,7 @@ export function Onboarding() {
                 />
                 <Field label="Posting frequency">
                   <SelectInput value={data.content.frequency} onChange={(e) => set('content', { ...data.content, frequency: e.target.value })}>
-                    {frequencyOptions.map((o) => (
+                    {frequencyOptions.map((o: string) => (
                       <option key={o} value={o} className="bg-ink-900">
                         {o}
                       </option>
