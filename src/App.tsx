@@ -27,6 +27,11 @@ import { PortalProvider } from './portal/lib/store'
 import { ToastProvider } from './portal/lib/toast'
 import { OAUTH_CALLBACK_PATH } from './portal/lib/authConfig'
 import { AuditModalProvider } from './audit/context/AuditModalContext'
+import { PrivacyPolicy } from './components/legal/PrivacyPolicy'
+import { TermsOfService } from './components/legal/TermsOfService'
+import { DataDeletion } from './components/legal/DataDeletion'
+import { CookiePolicy } from './components/legal/CookiePolicy'
+import { ContactPage } from './components/legal/ContactPage'
 
 /* ---------------- Lazy-loaded portal pages ---------------- */
 const PortalLayout = lazy(() => import('./portal/components/layout/PortalLayout').then(m => ({ default: m.PortalLayout })))
@@ -241,6 +246,13 @@ export default function App() {
               <Route path="/messages" element={<Messages />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
+
+            {/* Legal / Public pages */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/data-deletion" element={<DataDeletion />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+            <Route path="/contact" element={<ContactPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

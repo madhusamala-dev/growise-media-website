@@ -2,7 +2,7 @@ import { ArrowUpRight, Mail, MapPin, MessageCircle } from 'lucide-react'
 import { GrowiseLogo } from '../lib/logo'
 import { Container } from './ui/Container'
 import { Button } from './ui/Button'
-import { brand, contact, cta, navLinks, whatsappHref } from '../data/site'
+import { brand, contact, cta, legalLinks, navLinks, whatsappHref } from '../data/site'
 import { services } from '../data/services'
 
 export function Footer() {
@@ -91,7 +91,22 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+        {/* Legal links */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/10 pt-8">
+          {legalLinks.map((link, i) => (
+            <span key={link.href} className="flex items-center gap-4">
+              <a
+                href={link.href}
+                className="text-[13px] text-ink-400 transition-colors hover:text-ember-400"
+              >
+                {link.label}
+              </a>
+              {i < legalLinks.length - 1 && <span className="text-ink-600">|</span>}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row">
           <p className="text-sm text-ink-500">
             © {year} {brand.name}. All rights reserved.
           </p>

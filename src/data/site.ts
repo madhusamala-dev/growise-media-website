@@ -41,3 +41,11 @@ export function whatsappHref(message: string): string {
   const encoded = encodeURIComponent(message)
   return `https://wa.me/${contact.whatsappNumber}?text=${encoded}`
 }
+
+export const legalLinks = [
+  { href: '/privacy-policy', label: 'Privacy Policy' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/cookie-policy', label: 'Cookie Policy' },
+  { href: '/data-deletion', label: 'Data Deletion' },
+  { href: '/contact', label: 'Contact' },
+]
