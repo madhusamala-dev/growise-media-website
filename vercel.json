@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/meta-graph/:path*",
+      "destination": "https://graph.facebook.com/:path*"
+    },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

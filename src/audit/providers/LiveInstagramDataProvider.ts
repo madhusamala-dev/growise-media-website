@@ -2,6 +2,7 @@ import type { InstagramDataProvider } from './InstagramDataProvider'
 import type { InstagramMedia, InstagramProfile } from '../types'
 import { MockInstagramDataProvider } from './MockInstagramDataProvider'
 import { isSupabaseConfigured, supabase } from '../services/supabaseClient'
+import { fetchMetaInstagramProfile, isMetaConfigured, MetaApiError } from '../services/metaGraphApi'
 
 export class LiveInstagramDataProvider implements InstagramDataProvider {
   private mockProvider = new MockInstagramDataProvider()
@@ -23,7 +24,37 @@ export class LiveInstagramDataProvider implements InstagramDataProvider {
       return mockProfile
     }
 
-    // 3. Try Supabase Edge Function 'fetch-instagram-profile' if configured
+    // 3. ★ PRIMARY: Meta Graph API Business Discovery ★
+    if (isMetaConfigured) {
+      try {
+        const metaProfile = await fetchMetaInstagramProfile(cleanUsername)
+        if (metaProfile) {
+          this.profileCache.set(cleanUsername, metaProfile)
+          return metaProfile
+        }
+      } catch (err) {
+        if (err instanceof MetaApiError) {
+          // Re-throw auth errors so the modal can surface them clearly
+          if (err.isAuthError) {
+            throw new Error(
+              'Instagram API authentication failed. Please check your access token.',
+            )
+          }
+          // "Not found" — account may be personal/private, fall through to other strategies
+          if (err.isNotFound) {
+            console.warn(
+              `[MetaGraphApi] Username "${cleanUsername}" not found or is not a Business/Creator account. Trying fallbacks.`,
+            )
+          } else {
+            console.warn('[MetaGraphApi] Unexpected error:', err.message)
+          }
+        } else {
+          console.warn('[MetaGraphApi] Network error, trying fallbacks:', err)
+        }
+      }
+    }
+
+    // 4. Try Supabase Edge Function 'fetch-instagram-profile' if configured
     if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase.functions.invoke('fetch-instagram-profile', {
@@ -43,7 +74,7 @@ export class LiveInstagramDataProvider implements InstagramDataProvider {
       }
     }
 
-    // 4. Try Direct Public Fetch + CORS Proxy fallback for local browser execution
+    // 5. Try Direct Public Fetch + CORS Proxy fallback for local browser execution
     const targets = [
       `https://www.instagram.com/api/v1/users/web_profile_info/?username=${cleanUsername}`,
       `https://corsproxy.io/?${encodeURIComponent(`https://www.instagram.com/api/v1/users/web_profile_info/?username=${cleanUsername}`)}`,
@@ -105,6 +136,7 @@ export class LiveInstagramDataProvider implements InstagramDataProvider {
                 engagement_rate: liveProfile.followers_count > 0
                   ? Number(((((node.edge_media_preview_like?.count || 0) + (node.edge_media_to_comment?.count || 0)) / liveProfile.followers_count) * 100).toFixed(2))
                   : 0,
+                content_category: 'OTHER',
               }
             })
 
@@ -121,7 +153,7 @@ export class LiveInstagramDataProvider implements InstagramDataProvider {
       }
     }
 
-    // 5. Safe Fallback if Instagram endpoint is blocked or private
+    // 6. Safe Fallback if all live endpoints are blocked or private
     const fallbackProfile = await this.mockProvider.getProfile(cleanUsername)
     this.profileCache.set(cleanUsername, fallbackProfile)
     return fallbackProfile

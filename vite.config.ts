@@ -8,6 +8,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': 'http://localhost:3001',
+      // Proxy Meta Graph API calls to avoid CORS in dev
+      '/meta-graph': {
+        target: 'https://graph.facebook.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/meta-graph/, ''),
+        secure: true,
+      },
     },
   },
   build: {
