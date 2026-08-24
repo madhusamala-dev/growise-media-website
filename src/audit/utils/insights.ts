@@ -13,7 +13,7 @@ export interface Insight {
 
 export function generateInsights(report: Level2AuditReport): Insight[] {
   const insights: Insight[] = []
-  const { metrics, contentAnalysis, bestPerformingReels, worstPerformingReels, profile } = report
+  const { metrics, contentAnalysis, bestPerformingReels, worstPerformingReels } = report
   const consistency = contentAnalysis.postingConsistency
   const captionStats = contentAnalysis.captionStats
   const contentMix = contentAnalysis.contentMix

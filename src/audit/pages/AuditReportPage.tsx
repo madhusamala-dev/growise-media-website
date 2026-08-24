@@ -16,7 +16,6 @@ import {
   ExternalLink,
   Play,
   BarChart3,
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Trophy,
