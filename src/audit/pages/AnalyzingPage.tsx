@@ -5,14 +5,14 @@ import { AuditOrchestrator } from '../services/auditOrchestrator'
 import { AuditHeader } from '../components/AuditHeader'
 
 const STAGES = [
-  { id: 1, label: 'Checking profile details & bio clarity' },
-  { id: 2, label: 'Reviewing recent content & category mix' },
-  { id: 3, label: 'Analyzing Reels frequency & video views' },
-  { id: 4, label: 'Checking posting consistency & gaps' },
-  { id: 5, label: 'Evaluating follower engagement rate' },
-  { id: 6, label: 'Reviewing brand identity & visual tone' },
-  { id: 7, label: 'Checking conversion readiness & CTAs' },
-  { id: 8, label: 'Generating AI growth recommendations' },
+  { id: 1, label: 'Loading audit session from database' },
+  { id: 2, label: 'Connecting to Meta Business Discovery API' },
+  { id: 3, label: 'Fetching recent Instagram media with pagination' },
+  { id: 4, label: 'Filtering posts to 30-day audit window' },
+  { id: 5, label: 'Computing engagement & view rate metrics' },
+  { id: 6, label: 'Analyzing captions, CTAs & hashtags' },
+  { id: 7, label: 'Scoring profile, content & consistency' },
+  { id: 8, label: 'Generating evidence-based growth opportunities' },
 ]
 
 export function AnalyzingPage() {
@@ -55,7 +55,7 @@ export function AnalyzingPage() {
         clearInterval(interval)
         if (isMounted) {
           setTimeout(() => {
-            navigate(`/audit/${auditId}/preview`)
+            navigate(`/audit/${auditId}`)
           }, 600)
         }
       }
@@ -134,7 +134,7 @@ export function AnalyzingPage() {
       </main>
 
       <footer className="py-4 text-center text-xs text-slate-500 font-mono">
-        Growise AI Marketing Audit Engine v1.0
+        Growise Instagram Audit Engine v2.0 — Deterministic Analytics
       </footer>
     </div>
   )

@@ -241,6 +241,15 @@
   background: transparent;
 }
 
+/* ---------- Hide scrollbar for carousels ---------- */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* ---------- Portal: soft top glow for cards ---------- */
 .card-glow {
   background:

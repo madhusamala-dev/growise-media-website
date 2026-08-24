@@ -5,7 +5,9 @@ import { ScoreRing } from '../components/ScoreRing'
 import { LeadCaptureForm } from '../components/LeadCaptureForm'
 import { OpportunityCard } from '../components/OpportunityCard'
 import { AuditOrchestrator } from '../services/auditOrchestrator'
+import { getStoredLevel2Report } from '../types/level2'
 import type { AuditReport } from '../types'
+import type { Level2AuditReport } from '../types/level2'
 import { ShieldCheck } from 'lucide-react'
 
 export function LeadPreviewPage() {
@@ -13,17 +15,21 @@ export function LeadPreviewPage() {
   const navigate = useNavigate()
 
   const [report, setReport] = useState<AuditReport | null>(null)
+  const [level2Report, setLevel2Report] = useState<Level2AuditReport | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!auditId) return
 
     const loadReport = async () => {
+      // Load Level-2 report first (real data from Meta API)
+      const l2 = getStoredLevel2Report(auditId)
+      setLevel2Report(l2)
+
       const orchestrator = new AuditOrchestrator()
       const data = await orchestrator.getAuditReport(auditId)
       if (data) {
         setReport(data)
-        // If lead already captured, navigate directly to full report
         if (data.lead) {
           navigate(`/audit/${auditId}`)
         }
@@ -58,6 +64,40 @@ export function LeadPreviewPage() {
 
   const { session, profile, scores, recommendations } = report
 
+  // ── Use Level-2 data when available ────────────────────────────────────────
+  const displayScore = level2Report ? level2Report.score.total : scores.overall_score
+  const displayUsername = level2Report ? level2Report.profile.username : profile.username
+
+  // Real opportunity count from Level-2 engine (deterministic, evidence-based)
+  const opportunityCount = level2Report
+    ? level2Report.opportunities.length
+    : recommendations.length
+
+  // Build opportunity list for display
+  const displayOpportunities = level2Report
+    ? level2Report.opportunities.slice(0, 3).map((opp, i) => ({
+        id: `opp_${opp.rule}`,
+        title: opp.title,
+        description: opp.description,
+        impact: opp.impact,
+        effort: opp.effort,
+        category: opp.category,
+        priority: i + 1,
+        evidence: opp.evidence,
+      }))
+    : recommendations.slice(0, 3)
+
+  // Score-based insight text (derived from score, not hardcoded)
+  const scoreRating = level2Report ? level2Report.score.rating : null
+  const insightText =
+    scoreRating === 'EXCELLENT'
+      ? 'Your Instagram presence is performing exceptionally well. These opportunities can make it even stronger.'
+      : scoreRating === 'GOOD'
+      ? 'Your Instagram is performing well — but there are clear opportunities to accelerate growth.'
+      : scoreRating === 'NEEDS IMPROVEMENT'
+      ? 'There is significant potential to improve your Instagram performance. These opportunities will help you get there.'
+      : 'Your Instagram has major growth potential. These opportunities can transform your results quickly.'
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-ember-500 selection:text-white space-y-12 pb-20">
       <AuditHeader />
@@ -67,7 +107,7 @@ export function LeadPreviewPage() {
         <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-widest text-ember-400">
-              Audit Completed for @{profile.username}
+              Audit Completed for @{displayUsername}
             </span>
             <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white">
               YOUR INSTAGRAM GROWTH SCORE
@@ -75,11 +115,21 @@ export function LeadPreviewPage() {
           </div>
 
           <div className="py-2">
-            <ScoreRing score={scores.overall_score} size={170} strokeWidth={12} />
+            <ScoreRing score={displayScore} size={170} strokeWidth={12} />
           </div>
 
+          {level2Report && (
+            <div className="flex flex-wrap justify-center gap-4 text-xs font-mono text-slate-400">
+              <span>{level2Report.auditWindow.postsAnalyzed} posts analyzed</span>
+              <span>•</span>
+              <span>{level2Report.auditWindow.days}-day window</span>
+              <span>•</span>
+              <span>{level2Report.profile.followers.toLocaleString()} followers</span>
+            </div>
+          )}
+
           <p className="text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-            Good — but there is significant room for growth. We identified top operational and content optimization areas.
+            {insightText}
           </p>
         </div>
 
@@ -91,7 +141,7 @@ export function LeadPreviewPage() {
                 Found Opportunities
               </span>
               <h2 className="font-display text-2xl font-bold text-white">
-                We Found {recommendations.length * 2 + 1} Opportunities On Your Instagram
+                We Found {opportunityCount} Growth Opportunit{opportunityCount === 1 ? 'y' : 'ies'} on Your Instagram
               </h2>
             </div>
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold">
@@ -102,8 +152,8 @@ export function LeadPreviewPage() {
 
           {/* Top 3 Opportunities */}
           <div className="space-y-4">
-            {recommendations.slice(0, 3).map((opp, index) => (
-              <OpportunityCard key={opp.title} opportunity={opp} rank={index + 1} />
+            {displayOpportunities.map((opp, index) => (
+              <OpportunityCard key={opp.id || opp.title} opportunity={opp} rank={index + 1} />
             ))}
           </div>
         </div>
@@ -112,7 +162,7 @@ export function LeadPreviewPage() {
         <div id="lead-form-section" className="pt-4">
           <LeadCaptureForm
             auditId={session.id}
-            opportunityCount={recommendations.length * 2 + 1}
+            opportunityCount={opportunityCount}
             onSubmitSuccess={() => {
               setTimeout(() => {
                 navigate(`/audit/${session.id}`)

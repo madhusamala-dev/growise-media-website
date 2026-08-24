@@ -12,10 +12,10 @@ const AuditModalContext = createContext<AuditModalContextType | undefined>(undef
 
 export function AuditModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [initialUsername, setInitialUsername] = useState('madhusamala_')
+  const [initialUsername, setInitialUsername] = useState('')
 
   const openAuditModal = (username?: string) => {
-    setInitialUsername(username || 'madhusamala_')
+    setInitialUsername(username || '')
     setIsOpen(true)
   }
 

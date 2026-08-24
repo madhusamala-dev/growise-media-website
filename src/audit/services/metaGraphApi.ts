@@ -1,156 +1,157 @@
 /**
  * metaGraphApi.ts
  *
- * Client-side helper for the Meta Graph API Instagram Business Discovery endpoint.
- * Reads credentials from VITE_ environment variables so they are bundled safely
- * (access tokens for public read-only calls are acceptable on the client for
- *  Business Discovery — no write permissions are granted).
+ * Client-side helper for Meta Graph API interactions.
  *
- * API shape:
- *   GET /{version}/{BUSINESS_ACCOUNT_ID}
- *     ?fields=business_discovery.username({target}){id,username,name,...}
- *     &access_token={token}
+ * SECURITY NOTE:
+ *   All Meta API calls (profile fetch, media fetch) are routed through
+ *   Supabase Edge Functions. The Meta access token NEVER leaves the server.
+ *   This file contains NO tokens and NO direct Meta API calls.
  *
- * In dev, Vite proxies /meta-graph → https://graph.facebook.com (see vite.config.ts).
- * In production (Vercel), vercel.json rewrites /meta-graph/:path* the same way.
+ * The Supabase Edge Functions (`fetch-instagram-profile`, `instagram-audit`)
+ * hold META_ACCESS_TOKEN as a Supabase Secret (Deno.env) and call Meta on
+ * behalf of the frontend.
  */
 
+import { supabase } from './supabaseClient'
 import type { InstagramProfile } from '../types'
 
-// ─── Config (from .env) ────────────────────────────────────────────────────
-const BUSINESS_ID = import.meta.env.VITE_META_BUSINESS_ACCOUNT_ID as string
-const ACCESS_TOKEN = import.meta.env.VITE_META_ACCESS_TOKEN as string
-const GRAPH_VERSION = (import.meta.env.VITE_META_GRAPH_VERSION as string) || 'v26.0'
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG CHECK (Supabase — no client-side Meta credentials)
+// ─────────────────────────────────────────────────────────────────────────────
 
-export const isMetaConfigured =
-  !!BUSINESS_ID &&
-  !!ACCESS_TOKEN &&
-  ACCESS_TOKEN !== 'your-long-lived-access-token-here'
+export const isMetaConfigured: boolean = (() => {
+  const url = import.meta.env.VITE_SUPABASE_URL as string
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+  return !!url && url !== 'https://your-supabase-project.supabase.co' && !!key
+})()
 
-// ─── Types ─────────────────────────────────────────────────────────────────
-export interface MetaGraphProfileRaw {
-  business_discovery: {
-    id: string
-    username: string
-    name: string
-    biography?: string
-    website?: string
-    profile_picture_url?: string
-    followers_count?: number
-    follows_count?: number
-    media_count?: number
-  }
-  id: string
+// ─────────────────────────────────────────────────────────────────────────────
+// PROFILE FETCH VIA EDGE FUNCTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProfileFetchResult {
+  profile: InstagramProfile
+  instagramUserId: string
+  rootInstagramUserId: string
 }
 
-// ─── Main fetch function ───────────────────────────────────────────────────
-
 /**
- * Fetches an Instagram Business/Creator profile via the Meta Graph API
- * Business Discovery endpoint.
+ * Fetches an Instagram Business/Creator profile by calling the
+ * `fetch-instagram-profile` Supabase Edge Function.
  *
- * Returns null if the API is not configured or the request fails.
+ * The Edge Function uses the server-side META_ACCESS_TOKEN from Supabase
+ * Secrets — the token is never exposed to the browser.
+ *
+ * If auditId is provided, the Edge Function also updates the audit_sessions
+ * row with instagram_user_id and root_instagram_user_id.
  */
 export async function fetchMetaInstagramProfile(
   targetUsername: string,
-): Promise<InstagramProfile | null> {
-  if (!isMetaConfigured) {
-    console.warn(
-      '[MetaGraphApi] Not configured – set VITE_META_BUSINESS_ACCOUNT_ID and VITE_META_ACCESS_TOKEN in .env',
+  auditId?: string,
+): Promise<ProfileFetchResult> {
+  const cleanUsername = targetUsername.toLowerCase().trim().replace(/^@/, '')
+
+  if (!supabase) {
+    throw new MetaApiError(
+      'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.',
+      { reason: 'NOT_CONFIGURED' },
     )
-    return null
   }
 
-  const fields = [
-    'id',
-    'username',
-    'name',
-    'biography',
-    'website',
-    'profile_picture_url',
-    'followers_count',
-    'follows_count',
-    'media_count',
-  ].join(',')
-
-  const businessDiscoveryField = `business_discovery.username(${targetUsername}){${fields}}`
-
-  const params = new URLSearchParams({
-    fields: businessDiscoveryField,
-    access_token: ACCESS_TOKEN,
+  const { data, error } = await supabase.functions.invoke('fetch-instagram-profile', {
+    body: { username: cleanUsername, ...(auditId ? { auditId } : {}) },
   })
 
-  // Use the /meta-graph proxy path so CORS is not an issue in both dev and prod
-  const url = `/meta-graph/${GRAPH_VERSION}/${BUSINESS_ID}?${params.toString()}`
+  if (error) {
+    throw new MetaApiError(`Edge function error: ${error.message}`, { reason: 'API_ERROR' })
+  }
 
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-  })
-
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}))
-    const apiError = (errorBody as any)?.error
+  if (!data?.success || !data?.profile) {
+    // The function answered but has no profile for this username. Older
+    // deployments don't send `reason`, so default to NOT_FOUND — reaching the
+    // server and getting no profile back means the account isn't discoverable.
     throw new MetaApiError(
-      apiError?.message || `HTTP ${res.status}`,
-      apiError?.code,
-      apiError?.error_subcode,
-      apiError?.type,
+      data?.error || `@${cleanUsername} was not found on Instagram.`,
+      {
+        reason: (data?.reason as MetaFailureReason | undefined) ?? 'NOT_FOUND',
+        code: data?.code,
+        subcode: data?.subcode,
+      },
     )
   }
 
-  const json: MetaGraphProfileRaw = await res.json()
-  const bd = json.business_discovery
-
-  if (!bd) {
-    throw new MetaApiError(
-      `No business_discovery data returned for username "${targetUsername}". ` +
-        'Ensure the target account is a Business or Creator account visible to your linked Instagram Business.',
-    )
-  }
+  const raw = data.profile
 
   const profile: InstagramProfile = {
-    username: bd.username,
-    display_name: bd.name || bd.username,
-    bio: bd.biography || '',
-    profile_image_url: bd.profile_picture_url || '',
-    category: 'Business & Brand', // Business Discovery doesn't return category — default label
-    website_url: bd.website || '',
-    followers_count: bd.followers_count ?? 0,
-    following_count: bd.follows_count ?? 0,
-    posts_count: bd.media_count ?? 0,
-    is_business_account: true,
-    is_creator_account: false,
+    username: raw.username ?? cleanUsername,
+    display_name: raw.display_name ?? raw.username ?? cleanUsername,
+    bio: raw.bio ?? '',
+    profile_image_url: raw.profile_image_url ?? '',
+    category: raw.category ?? 'Business & Brand',
+    website_url: raw.website_url ?? '',
+    followers_count: raw.followers_count ?? 0,
+    following_count: raw.following_count ?? 0,
+    posts_count: raw.posts_count ?? 0,
+    is_business_account: raw.is_business_account ?? true,
+    is_creator_account: raw.is_creator_account ?? false,
     data_source: 'META',
-    raw_data: json as unknown as Record<string, unknown>,
+    raw_data: raw as unknown as Record<string, unknown>,
   }
 
-  return profile
+  return {
+    profile,
+    instagramUserId: data.instagramUserId ?? '',
+    rootInstagramUserId: data.rootInstagramUserId ?? '',
+  }
 }
 
-// ─── Custom error class ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOM ERROR CLASS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Failure classification returned by the `fetch-instagram-profile` edge function. */
+export type MetaFailureReason =
+  | 'INVALID_USERNAME'
+  | 'NOT_FOUND'
+  | 'AUTH'
+  | 'NOT_CONFIGURED'
+  | 'API_ERROR'
+
+export interface MetaApiErrorDetails {
+  reason?: MetaFailureReason
+  code?: number
+  subcode?: number
+  type?: string
+}
 
 export class MetaApiError extends Error {
+  public readonly reason?: MetaFailureReason
   public readonly code?: number
   public readonly subcode?: number
   public readonly type?: string
 
-  constructor(message: string, code?: number, subcode?: number, type?: string) {
+  constructor(message: string, details: MetaApiErrorDetails = {}) {
     super(message)
     this.name = 'MetaApiError'
-    this.code = code
-    this.subcode = subcode
-    this.type = type
+    this.reason = details.reason
+    this.code = details.code
+    this.subcode = details.subcode
+    this.type = details.type
   }
 
   /** True when the target IG account could not be found or is private/non-business */
   get isNotFound() {
-    // Error 100, subcode 33 = "Unsupported get request" / account not found
-    return this.code === 100 || this.subcode === 33
+    return this.reason === 'NOT_FOUND' || this.code === 100 || this.subcode === 33
   }
 
   /** True when the access token is invalid or expired */
   get isAuthError() {
-    return this.code === 190
+    return this.reason === 'AUTH' || this.code === 190
+  }
+
+  /** True when the server is missing Meta credentials */
+  get isNotConfigured() {
+    return this.reason === 'NOT_CONFIGURED'
   }
 }

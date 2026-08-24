@@ -233,7 +233,7 @@ export function BeforeAfter() {
           <p className="font-display text-xl font-bold text-paper-50 sm:text-2xl">
             {differenceCta.title}
           </p>
-          <Button onClick={() => openAuditModal('madhusamala_')} size="lg" className="mt-6">
+          <Button onClick={() => openAuditModal()} size="lg" className="mt-6">
             {differenceCta.button}
             <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Button>

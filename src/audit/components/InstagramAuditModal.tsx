@@ -32,9 +32,12 @@ export function InstagramAuditModal({
   const navigate = useNavigate()
 
   const [step, setStep] = useState<FlowStep>('INPUT')
-  const [usernameInput, setUsernameInput] = useState(initialUsername || 'madhusamala_')
+  const [usernameInput, setUsernameInput] = useState(initialUsername || '')
   const [error, setError] = useState<string | null>(null)
   const [fetchedProfile, setFetchedProfile] = useState<InstagramProfile | null>(null)
+  // Instagram User IDs returned by the edge function — never sent by the user
+  const [instagramUserId, setInstagramUserId] = useState<string>('')
+  const [rootInstagramUserId, setRootInstagramUserId] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -50,6 +53,8 @@ export function InstagramAuditModal({
         setStep('INPUT')
         setError(null)
         setFetchedProfile(null)
+        setInstagramUserId('')
+        setRootInstagramUserId('')
         setIsSubmitting(false)
       }, 300)
     }
@@ -72,10 +77,18 @@ export function InstagramAuditModal({
     try {
       const provider = new LiveInstagramDataProvider()
       const profile = await provider.getProfile(normalized.username)
+
+      // Capture Instagram User IDs from the provider cache (set by the edge function)
+      const igUserId = provider.getInstagramUserId(normalized.username) ?? ''
+      const rootIgUserId = provider.getRootInstagramUserId(normalized.username) ?? ''
+
       setFetchedProfile(profile)
+      setInstagramUserId(igUserId)
+      setRootInstagramUserId(rootIgUserId)
       setStep('CONFIRM')
-    } catch (err: any) {
-      setError('Could not connect to Instagram API for this username. Please try again.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not connect to Instagram API. Please try again.'
+      setError(message)
       setStep('INPUT')
     }
   }
@@ -87,11 +100,18 @@ export function InstagramAuditModal({
 
     try {
       const orchestrator = new AuditOrchestrator()
-      const session = await orchestrator.createAudit(fetchedProfile.username)
+      // Pass Instagram User IDs so the orchestrator can persist them server-side
+      // for the Level-2 audit engine — the IDs come from our Edge Function, not from the user
+      const session = await orchestrator.createAudit(
+        fetchedProfile.username,
+        instagramUserId || undefined,
+        rootInstagramUserId || undefined,
+      )
       onClose()
       navigate(`/audit/analyzing/${session.id}`)
-    } catch (err: any) {
-      setError('Failed to initiate audit session.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to initiate audit session.'
+      setError(message)
       setStep('CONFIRM')
       setIsSubmitting(false)
     }
@@ -156,7 +176,7 @@ export function InstagramAuditModal({
                     setUsernameInput(e.target.value.replace(/^@/, ''))
                     if (error) setError(null)
                   }}
-                  placeholder="madhusamala_"
+                  placeholder="yourusername"
                   className="w-full bg-transparent py-2.5 px-2 text-white font-mono text-base sm:text-lg focus:outline-none placeholder-slate-600 font-bold"
                   autoFocus
                 />
@@ -266,7 +286,7 @@ export function InstagramAuditModal({
 
               {/* Bio Preview */}
               <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 font-sans whitespace-pre-line leading-relaxed">
-                {fetchedProfile.bio}
+                {fetchedProfile.bio || <span className="text-slate-500 italic">No bio set</span>}
               </div>
 
               {/* Stats Grid */}
@@ -314,7 +334,7 @@ export function InstagramAuditModal({
                 ) : (
                   <>
                     <CheckCircle2 className="h-5 w-5 text-slate-950" />
-                    <span>Yes, Confirm & Start AI Audit</span>
+                    <span>Yes, Confirm & Start Audit</span>
                     <ArrowRight className="h-5 w-5 text-slate-950" />
                   </>
                 )}

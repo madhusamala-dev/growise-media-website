@@ -63,7 +63,7 @@ export function FreeAudit() {
                   <span className="rounded-full bg-white/5 px-3 py-1 font-display text-xs text-ink-300 border border-white/10">
                     Public Audit Engine
                   </span>
-                  <Button onClick={() => openAuditModal('madhusamala_')} size="sm">
+                  <Button onClick={() => openAuditModal()} size="sm">
                     Run My Free Audit
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
@@ -242,7 +242,7 @@ export function FreeAudit() {
                       <p className="font-display text-xs font-semibold text-white">Want to see your business audit score?</p>
                       <p className="text-[11px] text-ink-300">Takes under 60 seconds • 100% Free</p>
                     </div>
-                    <Button onClick={() => openAuditModal('madhusamala_')} size="sm">
+                    <Button onClick={() => openAuditModal()} size="sm">
                       Run My Free Audit
                       <ArrowRight className="h-4 w-4" />
                     </Button>

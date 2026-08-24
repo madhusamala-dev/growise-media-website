@@ -68,7 +68,7 @@ export function Hero() {
 
             <Reveal delay={240}>
               <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Button onClick={() => openAuditModal('madhusamala_')} size="lg">
+                <Button onClick={() => openAuditModal()} size="lg">
                   {cta.primary}
                   <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
                 </Button>

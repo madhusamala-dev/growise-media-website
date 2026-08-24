@@ -91,7 +91,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button onClick={() => openAuditModal('madhusamala_')} size="sm" className="hidden sm:inline-flex">
+          <Button onClick={() => openAuditModal()} size="sm" className="hidden sm:inline-flex">
             {cta.primary}
             <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
           </Button>
@@ -137,7 +137,7 @@ export function Header() {
             className="mt-6 w-full"
             onClick={() => {
               setOpen(false)
-              openAuditModal('madhusamala_')
+              openAuditModal()
             }}
           >
             {cta.primary}

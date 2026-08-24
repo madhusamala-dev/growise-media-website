@@ -43,7 +43,7 @@ export function FinalCTA() {
         </Reveal>
         <Reveal delay={300}>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Button onClick={() => openAuditModal('madhusamala_')} size="lg">
+            <Button onClick={() => openAuditModal()} size="lg">
               {cta.finalPrimary}
               <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>

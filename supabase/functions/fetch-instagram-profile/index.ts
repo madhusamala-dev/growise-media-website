@@ -1,133 +1,198 @@
+/**
+ * fetch-instagram-profile — Supabase Edge Function
+ *
+ * Uses Meta Business Discovery API to fetch an Instagram profile.
+ * The Meta access token and Business Account ID are loaded from
+ * Supabase Secrets (Deno.env) — never from the request body or query params.
+ *
+ * Request body: { username: string, auditId?: string }
+ * Response: { success: true, profile: {...}, instagramUserId: string }
+ *           { success: false, error: string, reason: FailureReason, code?, subcode? }
+ *
+ * If auditId is provided, updates audit_sessions with instagramUserId
+ * and rootInstagramUserId so the Level-2 audit can load them securely.
+ */
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// ── Regex: Instagram username rules (alphanumeric, underscore, dot, max 30) ──
+const INSTAGRAM_USERNAME_RE = /^[a-zA-Z0-9._]{1,30}$/
+
 interface RequestBody {
   username: string
+  auditId?: string
 }
 
+/**
+ * Machine-readable failure classification so the client can tell "this username
+ * does not exist" apart from "our API call broke". The client must never
+ * substitute placeholder data for a real lookup, so it needs the distinction.
+ */
+type FailureReason = 'INVALID_USERNAME' | 'NOT_FOUND' | 'AUTH' | 'NOT_CONFIGURED' | 'API_ERROR'
+
 serve(async (req) => {
-  // Handle CORS preflight
+  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { username }: RequestBody = await req.json()
+    const body: RequestBody = await req.json()
+    const rawUsername = body.username
+    const auditId = body.auditId
 
-    if (!username) {
-      return new Response(
-        JSON.stringify({ error: 'Username is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // ── Validate ──────────────────────────────────────────────────────────
+    if (!rawUsername || typeof rawUsername !== 'string') {
+      return jsonResponse({ success: false, reason: 'INVALID_USERNAME', error: 'username is required' }, 400)
     }
 
-    const cleanUsername = username.toLowerCase().trim().replace(/^@/, '')
+    const cleanUsername = rawUsername.toLowerCase().trim().replace(/^@/, '')
 
-    // Fetch public Instagram profile signals via public endpoint / web scraping headers
-    const url = `https://www.instagram.com/api/v1/users/web_profile_info/?username=${cleanUsername}`
-
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'X-IG-App-ID': '936619743392459',
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    })
-
-    if (!response.ok) {
-      // Fallback response structure if Instagram restricts endpoint
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Instagram API returned status ${response.status}`,
-          fallback_required: true,
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const data = await response.json()
-    const user = data?.data?.user
-
-    if (!user) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'User profile not found or account is private',
-          fallback_required: true,
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Parse Profile Data
-    const profile = {
-      username: user.username,
-      display_name: user.full_name || user.username,
-      bio: user.biography || '',
-      profile_image_url: user.profile_pic_url_hd || user.profile_pic_url,
-      category: user.category_name || user.business_category_name || 'Creator / Business',
-      website_url: user.external_url || '',
-      followers_count: user.edge_followed_by?.count || 0,
-      following_count: user.edge_follow?.count || 0,
-      posts_count: user.edge_owner_to_timeline_media?.count || 0,
-      is_business_account: !!user.is_business_account,
-      is_creator_account: !!user.is_professional_account,
-      is_private: !!user.is_private,
-      data_source: 'LIVE',
-    }
-
-    // Parse Media Data
-    const edges = user.edge_owner_to_timeline_media?.edges || []
-    const mediaList = edges.map((edge: any, index: number) => {
-      const node = edge.node
-      const isVideo = node.is_video
-      const mediaType = isVideo ? 'REEL' : node.__typename === 'GraphSidecar' ? 'CAROUSEL' : 'IMAGE'
-      const captionText = node.edge_media_to_caption?.edges?.[0]?.node?.text || ''
-
-      return {
-        external_media_id: node.id || `live_media_${index}`,
-        media_type: mediaType,
-        media_url: node.display_url,
-        thumbnail_url: node.thumbnail_src || node.display_url,
-        caption: captionText,
-        permalink: `https://www.instagram.com/p/${node.shortcode}/`,
-        published_at: node.taken_at_timestamp
-          ? new Date(node.taken_at_timestamp * 1000).toISOString()
-          : new Date().toISOString(),
-        like_count: node.edge_media_preview_like?.count || node.edge_liked_by?.count || 0,
-        comment_count: node.edge_media_to_comment?.count || 0,
-        view_count: node.video_view_count || (isVideo ? Math.floor((node.edge_media_preview_like?.count || 100) * 15) : 0),
-        share_count: Math.floor((node.edge_media_preview_like?.count || 10) * 0.1),
-        save_count: Math.floor((node.edge_media_preview_like?.count || 10) * 0.12),
-        engagement_rate: profile.followers_count > 0
-          ? Number(((((node.edge_media_preview_like?.count || 0) + (node.edge_media_to_comment?.count || 0)) / profile.followers_count) * 100).toFixed(2))
-          : 0,
-      }
-    })
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        profile,
-        media: mediaList,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({
+    if (!INSTAGRAM_USERNAME_RE.test(cleanUsername)) {
+      return jsonResponse({
         success: false,
-        error: error.message || 'Internal server error',
-        fallback_required: true,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+        reason: 'INVALID_USERNAME',
+        error: 'Invalid Instagram username. Only letters, numbers, underscores and dots allowed (max 30 chars).',
+      }, 400)
+    }
+
+    // ── Server-side credentials (never returned to client) ─────────────────
+    const META_ACCESS_TOKEN = Deno.env.get('META_ACCESS_TOKEN') ?? ''
+    const META_BUSINESS_ACCOUNT_ID = Deno.env.get('META_BUSINESS_ACCOUNT_ID') ?? ''
+    const GRAPH_VERSION = Deno.env.get('META_GRAPH_VERSION') ?? 'v26.0'
+
+    if (!META_ACCESS_TOKEN || !META_BUSINESS_ACCOUNT_ID) {
+      return jsonResponse({
+        success: false,
+        reason: 'NOT_CONFIGURED',
+        error: 'Meta API is not configured on the server. Please contact support.',
+      }, 503)
+    }
+
+    // ── Build Meta Business Discovery request ──────────────────────────────
+    const profileFields = [
+      'id',
+      'username',
+      'name',
+      'biography',
+      'website',
+      'profile_picture_url',
+      'followers_count',
+      'follows_count',
+      'media_count',
+    ].join(',')
+
+    const fields = `business_discovery.username(${cleanUsername}){${profileFields}}`
+
+    const metaUrl = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/${META_BUSINESS_ACCOUNT_ID}`)
+    metaUrl.searchParams.set('fields', fields)
+    metaUrl.searchParams.set('access_token', META_ACCESS_TOKEN)
+
+    const metaRes = await fetch(metaUrl.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    })
+
+    const metaJson = await metaRes.json()
+
+    // ── Handle Meta API errors ────────────────────────────────────────────
+    if (!metaRes.ok || metaJson.error) {
+      const apiErr = metaJson.error || {}
+      const code = apiErr.code
+      const subcode = apiErr.error_subcode
+      const msg = apiErr.message || `Meta API error (HTTP ${metaRes.status})`
+      console.error('[fetch-instagram-profile] Meta API error:', code, subcode, msg)
+
+      // Business Discovery reports an unknown / private / personal account as
+      // code 100 (with subcode 33 for "does not exist").
+      const reason: FailureReason =
+        code === 190 ? 'AUTH' : code === 100 || subcode === 33 ? 'NOT_FOUND' : 'API_ERROR'
+
+      return jsonResponse({
+        success: false,
+        reason,
+        code,
+        subcode,
+        username: cleanUsername,
+        error: reason === 'NOT_FOUND'
+          ? `@${cleanUsername} was not found on Instagram.`
+          : msg,
+      }, 200)
+    }
+
+    const bd = metaJson.business_discovery
+    if (!bd) {
+      return jsonResponse({
+        success: false,
+        reason: 'NOT_FOUND',
+        username: cleanUsername,
+        error: `@${cleanUsername} was not found on Instagram.`,
+      }, 200)
+    }
+
+    // ── Build profile response (NO token included) ─────────────────────────
+    const instagramUserId: string = bd.id ?? ''
+    const rootInstagramUserId: string = META_BUSINESS_ACCOUNT_ID
+
+    const profile = {
+      username: bd.username ?? cleanUsername,
+      display_name: bd.name ?? bd.username ?? cleanUsername,
+      bio: bd.biography ?? '',
+      profile_image_url: bd.profile_picture_url ?? '',
+      category: 'Business & Brand',
+      website_url: bd.website ?? '',
+      followers_count: bd.followers_count ?? 0,
+      following_count: bd.follows_count ?? 0,
+      posts_count: bd.media_count ?? 0,
+      is_business_account: true,
+      is_creator_account: false,
+      data_source: 'META',
+    }
+
+    // ── If auditId supplied, persist IDs server-side ───────────────────────
+    if (auditId) {
+      try {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        )
+        await supabase
+          .from('audit_sessions')
+          .update({
+            instagram_user_id: instagramUserId,
+            root_instagram_user_id: rootInstagramUserId,
+            instagram_username: cleanUsername,
+            data_source: 'META',
+          })
+          .eq('id', auditId)
+      } catch (dbErr) {
+        // Non-fatal: IDs will be missing but audit can still proceed
+        console.warn('[fetch-instagram-profile] DB update failed:', dbErr)
+      }
+    }
+
+    return jsonResponse({
+      success: true,
+      profile,
+      instagramUserId,
+      rootInstagramUserId,
+    })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal server error'
+    console.error('[fetch-instagram-profile] Unhandled error:', message)
+    return jsonResponse({ success: false, reason: 'API_ERROR', error: message }, 500)
   }
 })
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
