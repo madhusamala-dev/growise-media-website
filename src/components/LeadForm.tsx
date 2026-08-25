@@ -12,6 +12,7 @@ import { Reveal } from './ui/Reveal'
 import { Button } from './ui/Button'
 import { cta, contact, whatsappHref } from '../data/site'
 import { cn } from '../lib/cn'
+import { supabase, isSupabaseConfigured } from '../audit/services/supabaseClient'
 
 /* ---------------- field config ---------------- */
 
@@ -149,15 +150,44 @@ export function LeadForm() {
     return Object.keys(next).length === 0
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!validate()) return
 
+    if (!isSupabaseConfigured || !supabase) {
+      setServerError('Service is not configured. Please try again later.')
+      return
+    }
+
     setStatus('submitting')
     setServerError('')
-    setTimeout(() => {
+
+    try {
+      const { error } = await supabase.functions.invoke('inquiries', {
+        body: {
+          name: form.name.trim(),
+          businessName: form.businessName.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim() || undefined,
+          businessCategory: form.businessCategory || undefined,
+          location: form.location.trim() || undefined,
+          advertisingRequirement: form.adTarget.trim() || undefined,
+          contentTypes: form.contentNeeds.length > 0 ? form.contentNeeds : undefined,
+          monthlyContentVolume: form.videoCount || undefined,
+          website: form.website.trim() || undefined,
+          instagram: form.instagram.trim() || undefined,
+          additionalNotes: form.message.trim() || undefined,
+        },
+      })
+
+      if (error) throw error
+
       setStatus('success')
-    }, 600)
+    } catch (err) {
+      console.error('[LeadForm] Submission failed:', err)
+      setServerError('Something went wrong while submitting your enquiry. Please try again.')
+      setStatus('idle')
+    }
   }
 
   /* ---- success state ---- */
@@ -171,12 +201,11 @@ export function LeadForm() {
                 <CheckCircle2 className="h-9 w-9 text-emerald-400" aria-hidden />
               </span>
               <h2 id="contact-title" className="mt-6 font-display text-3xl font-bold text-paper-50">
-                Lead received, {form.name.split(' ')[0]}.
+                ✓ Enquiry Sent Successfully!
               </h2>
               <p className="mx-auto mt-4 max-w-md text-pretty text-[15px] leading-relaxed text-ink-300">
-                Thanks for telling us about {form.businessName}. Our team has your details and will
-                get back to you on <span className="font-semibold text-paper-100">{form.phone}</span>{' '}
-                with what we can create for you.
+                Thank you for reaching out to Growise Media.
+                Our team will get in touch with you shortly.
               </p>
               {contact.whatsappNumber && (
                 <p className="mt-4 text-sm text-ink-400">
@@ -466,7 +495,7 @@ export function LeadForm() {
                 {status === 'submitting' ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                    Sending…
+                    Sending Enquiry…
                   </>
                 ) : (
                   <>

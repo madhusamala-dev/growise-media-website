@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Shield, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 export function AuditHeader() {
   return (
@@ -21,18 +21,10 @@ export function AuditHeader() {
       <div className="flex items-center gap-4">
         <Link
           to="/"
-          className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/60 bg-slate-800/50 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition-all duration-200 shadow-sm"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-4 w-4" />
           <span>Back to Main Site</span>
-        </Link>
-
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono font-medium text-slate-300 hover:text-white transition-all"
-        >
-          <Shield className="h-3.5 w-3.5 text-amber-400" />
-          <span>Admin Portal</span>
         </Link>
       </div>
     </header>

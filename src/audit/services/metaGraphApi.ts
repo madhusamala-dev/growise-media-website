@@ -26,6 +26,17 @@ export const isMetaConfigured: boolean = (() => {
   return !!url && url !== 'https://your-supabase-project.supabase.co' && !!key
 })()
 
+if (!isMetaConfigured) {
+  // VITE_* vars are inlined at BUILD time. A deployment missing them will fail
+  // every real lookup permanently — the user-facing "try again later" copy is
+  // misleading here, so make the real cause visible in the console.
+  console.error(
+    '[metaGraphApi] Instagram lookups are disabled: VITE_SUPABASE_URL and/or ' +
+      'VITE_SUPABASE_ANON_KEY were not set when this bundle was built. ' +
+      'Set them in the hosting environment variables and redeploy.',
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PROFILE FETCH VIA EDGE FUNCTION
 // ─────────────────────────────────────────────────────────────────────────────
