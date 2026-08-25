@@ -14,7 +14,7 @@ export function Hero() {
   const { openAuditModal } = useAuditModal()
 
   return (
-    <section id="home" className="grain relative overflow-hidden bg-ink-950 pb-16 pt-32 lg:pt-36">
+    <section id="home" className="grain relative overflow-hidden bg-ink-950 pb-16 pt-[11rem] sm:pt-40 lg:pt-36">
       {/* Glow Backdrops */}
       <div aria-hidden className="bg-grid absolute inset-0 opacity-60" />
       <div

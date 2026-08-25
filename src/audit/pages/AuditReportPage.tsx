@@ -361,21 +361,19 @@ export function AuditReportPage() {
         {/* SECTION 1 — GROWTH SCORE HERO                                    */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
         <section className="p-6 sm:p-8 lg:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
-          {/* Verified badge */}
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Verified Audit</span>
-            </div>
-            <p className="text-[10px] text-slate-500 mt-1 text-right">Based on real Instagram data</p>
-          </div>
-
-          {/* Header */}
-          <div className="mb-6">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ember-500/10 text-ember-400 border border-ember-500/30 text-xs font-bold uppercase tracking-wider">
+          {/* Header row */}
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ember-500/10 text-ember-400 border border-ember-500/30 text-xs font-bold uppercase tracking-wider w-fit">
               <Flame className="h-3.5 w-3.5" />
               Audit Completed for @{profile.username}
             </span>
+            <div className="flex flex-col items-start sm:items-end">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Verified Audit</span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1 sm:text-right">Based on real Instagram data</p>
+            </div>
           </div>
 
           <div className="flex flex-col lg:flex-row items-center gap-8">
@@ -447,40 +445,36 @@ export function AuditReportPage() {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION 3 — TOP PERFORMING REELS                                 */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {bestPerformingReels.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-amber-400" />
-                <h2 className="font-display text-xl font-bold text-white">Top Performing Reels</h2>
-              </div>
-              {bestPerformingReels.length > 3 && (
-                <span className="text-xs text-slate-500 font-mono">View all {bestPerformingReels.length} →</span>
-              )}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-400" />
+              <h2 className="font-display text-xl font-bold text-white">Top Performing Reels</h2>
             </div>
-            <p className="text-sm text-slate-400">Your strongest content from the audit period.</p>
-            <ReelCarousel reels={bestPerformingReels} variant="top" />
-          </section>
-        )}
+            {bestPerformingReels.length > 3 && (
+              <span className="text-xs text-slate-500 font-mono">View all {bestPerformingReels.length} →</span>
+            )}
+          </div>
+          <p className="text-sm text-slate-400">Your strongest content from the audit period.</p>
+          <ReelCarousel reels={bestPerformingReels} variant="top" />
+        </section>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION 4 — LOWER PERFORMING REELS                               */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {worstPerformingReels.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-slate-400" />
-                <h2 className="font-display text-xl font-bold text-white">Lower Performing Reels</h2>
-              </div>
-              {worstPerformingReels.length > 3 && (
-                <span className="text-xs text-slate-500 font-mono">View all {worstPerformingReels.length} →</span>
-              )}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-slate-400" />
+              <h2 className="font-display text-xl font-bold text-white">Lower Performing Reels</h2>
             </div>
-            <p className="text-sm text-slate-400">Content that generated comparatively lower engagement during the audit period.</p>
-            <ReelCarousel reels={worstPerformingReels} variant="bottom" />
-          </section>
-        )}
+            {worstPerformingReels.length > 3 && (
+              <span className="text-xs text-slate-500 font-mono">View all {worstPerformingReels.length} →</span>
+            )}
+          </div>
+          <p className="text-sm text-slate-400">Content that generated comparatively lower engagement during the audit period.</p>
+          <ReelCarousel reels={worstPerformingReels} variant="bottom" />
+        </section>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* SECTION 5 — WHAT WE LEARNED                                      */}
