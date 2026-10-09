@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link2, Loader2, Unlink, Users } from 'lucide-react'
+import { ExternalLink, Info, Link2, Loader2, ShieldCheck, Unlink, Users } from 'lucide-react'
 import { usePortal } from '../lib/store'
 import { useToast } from '../lib/toast'
 import type { PlatformId } from '../data/types'
@@ -130,13 +130,53 @@ export function SocialAccounts() {
             })}
       </div>
 
+      {/* Security & Access Management Notice */}
+      <div className="mt-8 rounded-2xl border border-white/10 bg-ink-900/40 p-5">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-ember-400" />
+          <div className="space-y-1.5 text-xs leading-relaxed text-ink-300">
+            <p className="font-display font-semibold text-paper-100">OAuth Permissions &amp; Data Control</p>
+            <p>
+              GroWise requests access only to the permissions necessary to publish approved content, manage video metadata,
+              and display channel performance metrics. GroWise never sees or stores your third-party passwords.
+            </p>
+            <p className="pt-1 text-ink-400">
+              You can disconnect channels anytime above or revoke app access directly from your provider security portals:
+            </p>
+            <div className="flex flex-wrap items-center gap-4 pt-1">
+              <a
+                href="https://myaccount.google.com/permissions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-ember-400 hover:text-ember-300 underline"
+              >
+                Google Account Security Permissions
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <a
+                href="/privacy-policy"
+                className="inline-flex items-center gap-1 font-medium text-ink-300 hover:text-paper-100 underline"
+              >
+                GroWise Privacy Policy
+              </a>
+              <a
+                href="/data-deletion"
+                className="inline-flex items-center gap-1 font-medium text-ink-300 hover:text-paper-100 underline"
+              >
+                Data Deletion Instructions
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Modal
         open={disconnecting !== null}
         onClose={() => setDisconnecting(null)}
-        title="Disconnect platform?"
+        title={disconnecting ? `Disconnect ${PLATFORM_META[disconnecting].name}?` : 'Disconnect platform?'}
         description={
           disconnecting
-            ? `GroWise will stop publishing to ${PLATFORM_META[disconnecting].name}. Your content and history stay safe.`
+            ? `GroWise will immediately stop publishing to ${PLATFORM_META[disconnecting].name} and invalidate stored authorization tokens. Scheduled posts for this platform will be paused until reconnected.`
             : undefined
         }
         footer={
@@ -155,11 +195,30 @@ export function SocialAccounts() {
                 }
               }}
             >
-              Disconnect
+              Disconnect Platform
             </Button>
           </>
         }
-      />
+      >
+        {disconnecting === 'youtube' && (
+          <div className="rounded-xl border border-white/10 bg-ink-800/60 p-3.5 text-xs text-ink-300">
+            <p className="flex items-center gap-1.5 font-semibold text-paper-100">
+              <Info className="h-3.5 w-3.5 text-gold-400" /> Google OAuth Revocation
+            </p>
+            <p className="mt-1">
+              In addition to disconnecting above, you can manage or revoke GroWise&apos;s Google API access at any time on{' '}
+              <a
+                href="https://myaccount.google.com/permissions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ember-400 underline"
+              >
+                Google Third-party Apps Permissions
+              </a>.
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
@@ -185,3 +244,4 @@ function StatusChip({ status }: { status: 'connected' | 'not_connected' | 'conne
     </span>
   )
 }
+

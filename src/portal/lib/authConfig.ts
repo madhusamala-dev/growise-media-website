@@ -1,15 +1,34 @@
 /* ------------------------------------------------------------------ */
 /*  Auth configuration — environment-driven, never hardcoded.           */
 /*                                                                    */
+/*  Google Cloud Console OAuth Verification Configuration:             */
+/*    Project Name:   growise-media                                    */
+/*    Project Number: 200344434657                                     */
+/*                                                                    */
+/*  Configured OAuth Scopes:                                           */
+/*    1. https://www.googleapis.com/auth/youtube                       */
+/*       (Channel management, video metadata updates, video deletion)  */
+/*    2. https://www.googleapis.com/auth/youtube.upload                */
+/*       (Upload and publish videos and YouTube Shorts)                */
+/*    3. https://www.googleapis.com/auth/yt-analytics.readonly         */
+/*       (Retrieve channel & video analytics for dashboard metrics)    */
+/*                                                                    */
 /*  Required env vars (see .env.example):                              */
 /*    VITE_GOOGLE_CLIENT_ID  — public OAuth client ID (browser-safe)   */
 /*    VITE_API_BASE_URL      — Spring Boot backend origin (e.g.        */
 /*                             http://localhost:8080). When empty,     */
 /*                             same-origin `/api` is assumed.          */
 /*                                                                    */
-/*  The Google CLIENT SECRET must ONLY ever live in the Spring Boot    */
-/*  backend (application.yml / env). It is never shipped to the SPA.   */
+/*  The Google CLIENT SECRET must ONLY ever live in the backend        */
+/*  (application.yml / env / Supabase Vault). Never shipped to SPA.    */
 /* ------------------------------------------------------------------ */
+
+export const YOUTUBE_OAUTH_SCOPES = [
+  'https://www.googleapis.com/auth/youtube',
+  'https://www.googleapis.com/auth/youtube.upload',
+  'https://www.googleapis.com/auth/yt-analytics.readonly',
+] as const
+
 
 const rawClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 const rawApiBase = import.meta.env.VITE_API_BASE_URL ?? ''

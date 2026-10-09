@@ -200,6 +200,32 @@ export function ContentDetail() {
             </div>
           )}
 
+          {item.platforms.includes('youtube') && (
+            <div className="rounded-2xl border border-white/10 bg-ink-900/50 p-4 text-[12px] leading-relaxed text-ink-400">
+              <p className="font-semibold text-paper-200">YouTube Upload Certification</p>
+              <p className="mt-1">
+                By approving or publishing this content to YouTube, you confirm that your video complies with the{' '}
+                <a
+                  href="https://www.youtube.com/t/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ember-400 hover:text-ember-300 underline"
+                >
+                  YouTube Terms of Service
+                </a>{' '}
+                and{' '}
+                <a
+                  href="https://www.youtube.com/howyoutubeworks/policies/community-guidelines/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-ember-400 hover:text-ember-300 underline"
+                >
+                  Community Guidelines
+                </a>.
+              </p>
+            </div>
+          )}
+
           <Card className="p-5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">About this video</p>
             <p className="mt-2 text-[14px] leading-relaxed text-ink-300">{item.description}</p>

@@ -93,6 +93,29 @@ export function Approvals() {
                   {item.scheduledAt && <span>Goes live {formatDate(item.scheduledAt)}</span>}
                 </div>
 
+                {item.platforms.includes('youtube') && (
+                  <p className="mt-3 text-[11px] leading-relaxed text-ink-500">
+                    By approving for YouTube, you certify compliance with the{' '}
+                    <a
+                      href="https://www.youtube.com/t/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-ember-400 hover:text-ember-300 underline"
+                    >
+                      YouTube Terms
+                    </a>{' '}
+                    and{' '}
+                    <a
+                      href="https://www.youtube.com/howyoutubeworks/policies/community-guidelines/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-ember-400 hover:text-ember-300 underline"
+                    >
+                      Community Guidelines
+                    </a>.
+                  </p>
+                )}
+
                 <div className="mt-auto flex flex-wrap items-center gap-3 pt-4">
                   <Button onClick={() => handleApprove(item.id)}>
                     <CheckCircle2 className="h-4 w-4" aria-hidden /> Approve
